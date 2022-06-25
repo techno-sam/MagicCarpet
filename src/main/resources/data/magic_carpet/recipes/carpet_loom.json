@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "__",
+    "##",
+    "##"
+  ],
+  "key": {
+    "#": {
+      "tag": "minecraft:planks"
+    },
+    "_": {
+      "tag": "minecraft:carpets"
+    }
+  },
+  "result": {
+    "item": "magic_carpet:carpet_loom"
+  }
+}

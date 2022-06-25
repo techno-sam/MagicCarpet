@@ -1,5 +1,9 @@
 {
   "entity.magic_carpet.magic_carpet": "Magic Carpet",
 
-  "item.magic_carpet.magic_carpet": "Magic Carpet"
+  "item.magic_carpet.magic_carpet": "Magic Carpet",
+
+  "block.magic_carpet.carpet_loom": "Carpet Loom",
+
+  "screen.magic_carpet.carpet_loom.title": "Carpet Loom"
 }

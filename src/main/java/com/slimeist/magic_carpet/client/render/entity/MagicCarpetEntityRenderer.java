@@ -51,6 +51,18 @@ public class MagicCarpetEntityRenderer extends EntityRenderer<MagicCarpetEntity>
         matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(-entity.getPitch()));
         matrices.translate(0, -0.85, 0);
 
+        //Damage wobble
+        if (!isItem) {
+            float h = (float)entity.getDamageWobbleTicks() - tickDelta;
+            float j = entity.getDamageWobbleStrength() - tickDelta;
+            if (j < 0.0f) {
+                j = 0.0f;
+            }
+            if (h > 0.0f) {
+                matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(MathHelper.sin(h) * h * j / 10.0f * (float)entity.getDamageWobbleSide()));
+            }
+        }
+
         //Render time!
         float ageInTicks = age + tickDelta;
         for (int i = 0; i < VERTEX_COUNT; i++) {

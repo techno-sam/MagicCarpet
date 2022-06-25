@@ -19,6 +19,6 @@ public class MagicCarpetItemRenderer implements BuiltinItemRendererRegistry.Dyna
         assert entity != null;
         entity.setColors(stack);
         ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        MagicCarpetEntityRenderer.render(entity, MinecraftClient.getInstance().getTickDelta(), 0f, player != null ? player.age : 0, matrices, vertexConsumers, light, true);
+        MagicCarpetEntityRenderer.render(entity, 0f, MinecraftClient.getInstance().getTickDelta(), player != null ? player.age: 0, matrices, vertexConsumers, light, true);
     }
 }

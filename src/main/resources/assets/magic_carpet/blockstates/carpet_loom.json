@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "magic_carpet:block/carpet_loom",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "magic_carpet:block/carpet_loom"
+    },
+    "facing=south": {
+      "model": "magic_carpet:block/carpet_loom",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "magic_carpet:block/carpet_loom",
+      "y": 270
+    }
+  }
+}

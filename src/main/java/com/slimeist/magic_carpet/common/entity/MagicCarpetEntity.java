@@ -1,14 +1,13 @@
 package com.slimeist.magic_carpet.common.entity;
 
+import com.google.common.collect.Lists;
 import com.slimeist.magic_carpet.MagicCarpetMod;
-import com.slimeist.magic_carpet.client.util.CarpetUtil;
 import com.slimeist.magic_carpet.common.enums.CarpetLayer;
 import com.slimeist.magic_carpet.common.item.MagicCarpetItem;
+import com.slimeist.magic_carpet.common.particle.MovingDustParticleEffect;
+import com.slimeist.magic_carpet.common.util.MathUtil;
 import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MovementType;
+import net.minecraft.entity.*;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -18,10 +17,11 @@ import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
+import net.minecraft.particle.DustParticleEffect;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
@@ -35,6 +35,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,6 +44,9 @@ import static com.slimeist.magic_carpet.common.util.MathUtil.cap;
 //center costs 3 carpets, border 2, deco 1
 
 public class MagicCarpetEntity extends Entity {
+    private static final TrackedData<Integer> DAMAGE_WOBBLE_TICKS = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> DAMAGE_WOBBLE_SIDE = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Float> DAMAGE_WOBBLE_STRENGTH = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Integer> BORDER_COLOR = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> CENTER_COLOR = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> DECORATION_COLOR = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
@@ -97,8 +101,35 @@ public class MagicCarpetEntity extends Entity {
         }
     }
 
+    public void setDamageWobbleStrength(float wobbleStrength) {
+        this.dataTracker.set(DAMAGE_WOBBLE_STRENGTH, wobbleStrength);
+    }
+
+    public float getDamageWobbleStrength() {
+        return this.dataTracker.get(DAMAGE_WOBBLE_STRENGTH);
+    }
+
+    public void setDamageWobbleTicks(int wobbleTicks) {
+        this.dataTracker.set(DAMAGE_WOBBLE_TICKS, wobbleTicks);
+    }
+
+    public int getDamageWobbleTicks() {
+        return this.dataTracker.get(DAMAGE_WOBBLE_TICKS);
+    }
+
+    public void setDamageWobbleSide(int side) {
+        this.dataTracker.set(DAMAGE_WOBBLE_SIDE, side);
+    }
+
+    public int getDamageWobbleSide() {
+        return this.dataTracker.get(DAMAGE_WOBBLE_SIDE);
+    }
+
     @Override
     protected void initDataTracker() {
+        this.dataTracker.startTracking(DAMAGE_WOBBLE_TICKS, 0);
+        this.dataTracker.startTracking(DAMAGE_WOBBLE_SIDE, 1);
+        this.dataTracker.startTracking(DAMAGE_WOBBLE_STRENGTH, 0.0f);
         this.dataTracker.startTracking(BORDER_COLOR, DyeColor.YELLOW.getId());
         this.dataTracker.startTracking(CENTER_COLOR, DyeColor.RED.getId());
         this.dataTracker.startTracking(DECORATION_COLOR, DyeColor.LIME.getId());
@@ -190,6 +221,12 @@ public class MagicCarpetEntity extends Entity {
 
     @Override
     public void tick() {
+        if (this.getDamageWobbleTicks() > 0) {
+            this.setDamageWobbleTicks(this.getDamageWobbleTicks() - 1);
+        }
+        if (this.getDamageWobbleStrength() > 0.0f) {
+            this.setDamageWobbleStrength(this.getDamageWobbleStrength() - 1.0f);
+        }
         super.tick();
         this.syncPos();
         if (this.isLogicalSideForUpdatingMovement()) {
@@ -222,6 +259,17 @@ public class MagicCarpetEntity extends Entity {
                 this.pushAwayFrom(entity);
             }
         }
+        if (this.world.isClient && realVelocity().lengthSquared()>(0.01*0.01)) {
+            Vec3d leftPos = new Vec3d(1.0d, 0.0d, -1.5d).rotateX(-this.getPitch() * ((float)Math.PI / 180)).rotateY(-this.getYaw() * ((float)Math.PI / 180)).add(this.getPos());
+            Vec3d rightPos = new Vec3d(-1.0d, 0.0d, -1.5d).rotateX(-this.getPitch() * ((float)Math.PI / 180)).rotateY(-this.getYaw() * ((float)Math.PI / 180)).add(this.getPos());
+            double mul = 0.23/5d;
+            world.addParticle(new MovingDustParticleEffect(MathUtil.vector(this.getLayerColor(CarpetLayer.BORDER).getColorComponents()), 1.3f), leftPos.x, leftPos.y, leftPos.z, random.nextDouble(-1.0, 1.0)*mul, random.nextDouble(-1.0, 1.0)*mul, random.nextDouble(-1.0, 1.0)*mul);
+            world.addParticle(new MovingDustParticleEffect(MathUtil.vector(this.getLayerColor(CarpetLayer.BORDER).getColorComponents()), 1.3f), rightPos.x, rightPos.y, rightPos.z, random.nextDouble(-1.0, 1.0)*mul, random.nextDouble(-1.0, 1.0)*mul, random.nextDouble(-1.0, 1.0)*mul);
+        }
+    }
+
+    private Vec3d realVelocity() {
+        return new Vec3d(this.getX()-this.prevX, this.getY()-this.prevY, this.getZ()-this.prevZ);
     }
 
     private void updateVelocity() {
@@ -287,6 +335,34 @@ public class MagicCarpetEntity extends Entity {
     }
 
     @Override
+    public Vec3d updatePassengerForDismount(LivingEntity passenger) {
+        double e;
+        Vec3d vec3d = BoatEntity.getPassengerDismountOffset(this.getWidth() * MathHelper.SQUARE_ROOT_OF_TWO, passenger.getWidth(), passenger.getYaw());
+        double d = this.getX() + vec3d.x;
+        BlockPos blockPos = new BlockPos(d, this.getBoundingBox().maxY, e = this.getZ() + vec3d.z);
+        BlockPos blockPos2 = blockPos.down();
+        if (!this.world.isWater(blockPos2)) {
+            double g;
+            ArrayList<Vec3d> list = Lists.newArrayList();
+            double f = this.world.getDismountHeight(blockPos);
+            if (Dismounting.canDismountInBlock(f)) {
+                list.add(new Vec3d(d, (double)blockPos.getY() + f, e));
+            }
+            if (Dismounting.canDismountInBlock(g = this.world.getDismountHeight(blockPos2))) {
+                list.add(new Vec3d(d, (double)blockPos2.getY() + g, e));
+            }
+            for (EntityPose entityPose : passenger.getPoses()) {
+                for (Vec3d vec3d2 : list) {
+                    if (!Dismounting.canPlaceEntityAt(this.world, vec3d2, passenger, entityPose)) continue;
+                    passenger.setPose(entityPose);
+                    return vec3d2;
+                }
+            }
+        }
+        return super.updatePassengerForDismount(passenger);
+    }
+
+    @Override
     protected MoveEffect getMoveEffect() {
         return MoveEffect.NONE;
     }
@@ -317,7 +393,7 @@ public class MagicCarpetEntity extends Entity {
         } else if (super.hasNoGravity()) {
             MagicCarpetMod.LOGGER.info("NO gavity parent");
         }*/
-        return super.hasNoGravity() || (this.getFirstPassenger() instanceof PlayerEntity);
+        return (this.getFirstPassenger() instanceof PlayerEntity);
     }
 
     @Override
@@ -360,10 +436,13 @@ public class MagicCarpetEntity extends Entity {
         if (this.world.isClient || this.isRemoved()) {
             return true;
         }
+        this.setDamageWobbleSide(-this.getDamageWobbleSide());
+        this.setDamageWobbleTicks(10);
+        this.setDamageWobbleStrength(this.getDamageWobbleStrength() + amount * 10.0f);
         this.scheduleVelocityUpdate();
         this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
         boolean creative = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).getAbilities().creativeMode;
-        if (creative || true) {
+        if (creative || this.getDamageWobbleStrength() > 40.0f) {
             if (!creative && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                 ItemStack stack = new ItemStack(MagicCarpetMod.MAGIC_CARPET_ITEM, 1);
                 Arrays.stream(CarpetLayer.values()).forEach((layer -> MagicCarpetItem.setLayerColor(stack, layer, this.getLayerColor(layer))));
@@ -372,5 +451,12 @@ public class MagicCarpetEntity extends Entity {
             this.discard();
         }
         return true;
+    }
+
+    @Override
+    public void animateDamage() {
+        this.setDamageWobbleSide(-this.getDamageWobbleSide());
+        this.setDamageWobbleTicks(10);
+        this.setDamageWobbleStrength(this.getDamageWobbleStrength() * 11.0f);
     }
 }

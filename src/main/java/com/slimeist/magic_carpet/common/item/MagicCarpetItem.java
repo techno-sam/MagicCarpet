@@ -85,10 +85,9 @@ public class MagicCarpetItem extends Item {
         };
     }
 
-    private static NbtCompound setColor(NbtCompound nbt, CarpetLayer layer, DyeColor color) {
+    private static void setColor(NbtCompound nbt, CarpetLayer layer, DyeColor color) {
         String key = layer.name().toLowerCase() + "Color";
         nbt.putInt(key, color.getId());
-        return nbt;
     }
 
     public static DyeColor getLayerColor(ItemStack stack, CarpetLayer layer) {
@@ -96,6 +95,6 @@ public class MagicCarpetItem extends Item {
     }
 
     public static void setLayerColor(ItemStack stack, CarpetLayer layer, DyeColor color) {
-        stack.setNbt(setColor(stack.getOrCreateNbt(), layer, color));
+        setColor(stack.getOrCreateNbt(), layer, color);
     }
 }
