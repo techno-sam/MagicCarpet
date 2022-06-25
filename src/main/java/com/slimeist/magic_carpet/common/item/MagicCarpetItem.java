@@ -1,14 +1,17 @@
 package com.slimeist.magic_carpet.common.item;
 
 import com.slimeist.magic_carpet.common.entity.MagicCarpetEntity;
+import com.slimeist.magic_carpet.common.enums.CarpetLayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.BoatItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.stat.Stats;
+import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.hit.BlockHitResult;
@@ -20,6 +23,7 @@ import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -49,6 +53,7 @@ public class MagicCarpetItem extends Item {
         }
         if (((HitResult)hitResult).getType() == HitResult.Type.BLOCK) {
             MagicCarpetEntity magicCarpetEntity = MagicCarpetEntity.at(world, hitResult.getPos().x, hitResult.getPos().y, hitResult.getPos().z);
+            Arrays.stream(CarpetLayer.values()).forEach((layer -> magicCarpetEntity.setLayerColor(layer, getLayerColor(itemStack, layer))));
             magicCarpetEntity.setYaw(user.getYaw());
             if (!world.isSpaceEmpty(magicCarpetEntity, magicCarpetEntity.getBoundingBox())) {
                 return TypedActionResult.fail(itemStack);
@@ -64,5 +69,33 @@ public class MagicCarpetItem extends Item {
             return TypedActionResult.success(itemStack, world.isClient());
         }
         return TypedActionResult.pass(itemStack);
+    }
+
+    private static DyeColor getColor(NbtCompound nbt, CarpetLayer layer) {
+        if (nbt != null) {
+            String key = layer.name().toLowerCase() + "Color";
+            if (nbt.contains(key)) {
+                return DyeColor.byId(nbt.getInt(key));
+            }
+        }
+        return switch (layer) {
+            default -> DyeColor.RED;
+            case BORDER -> DyeColor.YELLOW;
+            case DECORATION -> DyeColor.LIME;
+        };
+    }
+
+    private static NbtCompound setColor(NbtCompound nbt, CarpetLayer layer, DyeColor color) {
+        String key = layer.name().toLowerCase() + "Color";
+        nbt.putInt(key, color.getId());
+        return nbt;
+    }
+
+    public static DyeColor getLayerColor(ItemStack stack, CarpetLayer layer) {
+        return getColor(stack.getNbt(), layer);
+    }
+
+    public static void setLayerColor(ItemStack stack, CarpetLayer layer, DyeColor color) {
+        stack.setNbt(setColor(stack.getOrCreateNbt(), layer, color));
     }
 }

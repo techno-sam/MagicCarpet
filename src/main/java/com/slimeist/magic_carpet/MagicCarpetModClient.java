@@ -2,13 +2,17 @@ package com.slimeist.magic_carpet;
 
 import com.slimeist.magic_carpet.client.render.entity.MagicCarpetEntityRenderer;
 import com.slimeist.magic_carpet.client.render.entity.model.MagicCarpetEntityModel;
+import com.slimeist.magic_carpet.client.render.item.MagicCarpetItemRenderer;
 import com.slimeist.magic_carpet.common.entity.MagicCarpetEntity;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.input.Input;
 import net.minecraft.client.render.entity.model.EntityModelLayer;
+
+import static com.slimeist.magic_carpet.MagicCarpetMod.MAGIC_CARPET_ITEM;
 
 public class MagicCarpetModClient implements ClientModInitializer {
     public static final EntityModelLayer MODEL_MAGIC_CARPET_LAYER = new EntityModelLayer(MagicCarpetMod.id("magic_carpet"), "main");
@@ -26,5 +30,7 @@ public class MagicCarpetModClient implements ClientModInitializer {
                 }
             }
         });
+
+        BuiltinItemRendererRegistry.INSTANCE.register(MAGIC_CARPET_ITEM, new MagicCarpetItemRenderer());
     }
 }

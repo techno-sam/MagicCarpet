@@ -1,22 +1,30 @@
 package com.slimeist.magic_carpet.common.entity;
 
 import com.slimeist.magic_carpet.MagicCarpetMod;
+import com.slimeist.magic_carpet.client.util.CarpetUtil;
+import com.slimeist.magic_carpet.common.enums.CarpetLayer;
+import com.slimeist.magic_carpet.common.item.MagicCarpetItem;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.WaterCreatureEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.util.ActionResult;
+import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -27,11 +35,18 @@ import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static com.slimeist.magic_carpet.common.util.MathUtil.cap;
 
+//center costs 3 carpets, border 2, deco 1
+
 public class MagicCarpetEntity extends Entity {
+    private static final TrackedData<Integer> BORDER_COLOR = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> CENTER_COLOR = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> DECORATION_COLOR = DataTracker.registerData(MagicCarpetEntity.class, TrackedDataHandlerRegistry.INTEGER);
+
     private double x;
     private double y;
     private double z;
@@ -60,19 +75,56 @@ public class MagicCarpetEntity extends Entity {
         return new MagicCarpetEntity(world, x, y, z);
     }
 
+    public DyeColor getLayerColor(CarpetLayer layer) {
+        return switch (layer) {
+            default -> DyeColor.byId(this.dataTracker.get(CENTER_COLOR));
+            case BORDER -> DyeColor.byId(this.dataTracker.get(BORDER_COLOR));
+            case DECORATION -> DyeColor.byId(this.dataTracker.get(DECORATION_COLOR));
+        };
+    }
+
+    public void setLayerColor(CarpetLayer layer, DyeColor color) {
+        switch (layer) {
+            default -> this.dataTracker.set(CENTER_COLOR, color.getId());
+            case BORDER -> this.dataTracker.set(BORDER_COLOR, color.getId());
+            case DECORATION -> this.dataTracker.set(DECORATION_COLOR, color.getId());
+        }
+    }
+
+    public void setColors(ItemStack stack) {
+        if (stack.isOf(MagicCarpetMod.MAGIC_CARPET_ITEM)) {
+            Arrays.stream(CarpetLayer.values()).forEach((layer -> this.setLayerColor(layer, MagicCarpetItem.getLayerColor(stack, layer))));
+        }
+    }
+
     @Override
     protected void initDataTracker() {
-
+        this.dataTracker.startTracking(BORDER_COLOR, DyeColor.YELLOW.getId());
+        this.dataTracker.startTracking(CENTER_COLOR, DyeColor.RED.getId());
+        this.dataTracker.startTracking(DECORATION_COLOR, DyeColor.LIME.getId());
     }
 
     @Override
     protected void readCustomDataFromNbt(NbtCompound nbt) {
-
+        Arrays.stream(CarpetLayer.values()).forEach((layer) -> {
+            this.setLayerColor(layer, DyeColor.WHITE);
+        });
+        if (nbt.contains("borderColor")) {
+            this.setLayerColor(CarpetLayer.BORDER, DyeColor.byId(nbt.getInt("borderColor")));
+        }
+        if (nbt.contains("centerColor")) {
+            this.setLayerColor(CarpetLayer.CENTER, DyeColor.byId(nbt.getInt("centerColor")));
+        }
+        if (nbt.contains("decorationColor")) {
+            this.setLayerColor(CarpetLayer.DECORATION, DyeColor.byId(nbt.getInt("decorationColor")));
+        }
     }
 
     @Override
     protected void writeCustomDataToNbt(NbtCompound nbt) {
-
+        nbt.putInt("borderColor", this.getLayerColor(CarpetLayer.BORDER).getId());
+        nbt.putInt("centerColor", this.getLayerColor(CarpetLayer.CENTER).getId());
+        nbt.putInt("decorationColor", this.getLayerColor(CarpetLayer.DECORATION).getId());
     }
 
     @Override
@@ -270,7 +322,7 @@ public class MagicCarpetEntity extends Entity {
 
     @Override
     public double getMountedHeightOffset() {
-        return -0.2;
+        return -0.1;
     }
 
     @Override
@@ -313,7 +365,9 @@ public class MagicCarpetEntity extends Entity {
         boolean creative = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).getAbilities().creativeMode;
         if (creative || true) {
             if (!creative && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
-                this.dropItem(MagicCarpetMod.MAGIC_CARPET_ITEM);
+                ItemStack stack = new ItemStack(MagicCarpetMod.MAGIC_CARPET_ITEM, 1);
+                Arrays.stream(CarpetLayer.values()).forEach((layer -> MagicCarpetItem.setLayerColor(stack, layer, this.getLayerColor(layer))));
+                this.dropStack(stack);
             }
             this.discard();
         }

@@ -4,16 +4,16 @@
   "version": "${version}",
 
   "name": "Magic Carpet",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "Magic Flying Carpets!",
   "authors": [
-    "Me!"
+    "Slimeist"
   ],
   "contact": {
     "homepage": "https://github.com/techno-sam/MagicCarpet",
     "sources": "https://github.com/techno-sam/MagicCarpet"
   },
 
-  "license": "LGPL-v3",
+  "license": "GPL-v3",
   "icon": "assets/magic_carpet/icon.png",
 
   "environment": "*",
@@ -36,6 +36,5 @@
     "java": ">=17"
   },
   "suggests": {
-    "another-mod": "*"
   }
 }
